@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devsecops-demo-config
+  namespace: devsecops-demo
+  labels:
+    app.kubernetes.io/name: devsecops-demo
+data:
+  APP_NAME: "devsecops-demo"
+  APP_ENV: "kubernetes"
+  APP_MESSAGE: "Running in Kubernetes"
+  APP_LOG_LEVEL: "info"
+  APP_WORKERS: "1"
