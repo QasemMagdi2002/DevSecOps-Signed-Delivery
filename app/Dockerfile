@@ -27,16 +27,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 RUN apk add --no-cache tini \
-    && addgroup -S appgroup \
-    && adduser -S -G appgroup -h /home/appuser appuser
+    && addgroup -g 10001 -S appgroup \
+    && adduser -u 10001 -S -G appgroup -h /home/appuser appuser
 
 COPY --from=builder /opt/venv /opt/venv
-COPY --chown=appuser:appgroup src /app/src
-COPY --chown=appuser:appgroup scripts/start.sh /app/scripts/start.sh
+COPY --chown=10001:10001 src /app/src
+COPY --chown=10001:10001 scripts/start.sh /app/scripts/start.sh
 
 RUN chmod 0555 /app/scripts/start.sh
 
-USER appuser:appgroup
+USER 10001:10001
 
 EXPOSE 8000
 
