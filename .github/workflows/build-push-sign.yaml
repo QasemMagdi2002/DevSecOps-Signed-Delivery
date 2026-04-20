@@ -1,4 +1,4 @@
-name: Build Push and Sign Image
+name: Build Push Scan Sign Image
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build-push-sign:
-    name: Build, push, and sign Docker image
+    name: Build, scan, SBOM, push, and sign Docker image
     runs-on: ubuntu-latest
 
     steps:
@@ -26,6 +26,7 @@ jobs:
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "image=ghcr.io/${OWNER_LC}/devsecops-demo" >> "$GITHUB_OUTPUT"
+          echo "local_image=devsecops-demo:ci" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -42,6 +43,40 @@ jobs:
             org.opencontainers.image.title=devsecops-demo
             org.opencontainers.image.description=DevSecOps demo service
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Build image locally for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          file: ./app/Dockerfile
+          load: true
+          push: false
+          tags: ${{ steps.image.outputs.local_image }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Run Trivy image scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ steps.image.outputs.local_image }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: "HIGH,CRITICAL"
+          vuln-type: "os,library"
+          scanners: "vuln"
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Generate SBOM with Syft
+        run: |
+          syft ${{ steps.image.outputs.local_image }} -o cyclonedx-json=sbom-cyclonedx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom-cyclonedx.json
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -60,6 +95,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Show pushed image reference
+        run: |
+          echo "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
+
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
 
@@ -75,7 +114,3 @@ jobs:
             --certificate-identity-regexp "https://github.com/${{ github.repository }}/.+" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
-
-      - name: Show pushed image reference
-        run: |
-          echo "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
