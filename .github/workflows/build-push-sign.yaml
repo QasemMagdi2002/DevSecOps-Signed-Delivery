@@ -1,4 +1,4 @@
-name: Build and Push Image
+name: Build Push and Sign Image
 
 on:
   push:
@@ -9,10 +9,11 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 jobs:
-  build-push:
-    name: Build and push Docker image
+  build-push-sign:
+    name: Build, push, and sign Docker image
     runs-on: ubuntu-latest
 
     steps:
@@ -58,3 +59,23 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image by digest
+        env:
+          COSIGN_YES: "true"
+        run: |
+          cosign sign "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
+
+      - name: Verify signed image
+        run: |
+          cosign verify \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.+" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
+
+      - name: Show pushed image reference
+        run: |
+          echo "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
