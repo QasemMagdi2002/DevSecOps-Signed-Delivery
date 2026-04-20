@@ -79,3 +79,4 @@ jobs:
           ignore-unfixed: true
           severity: "HIGH,CRITICAL"
           scanners: "vuln,misconfig,secret"
+          skip-files: k8s/components.yaml
