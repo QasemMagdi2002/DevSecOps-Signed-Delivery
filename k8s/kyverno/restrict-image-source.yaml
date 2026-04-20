@@ -1,0 +1,22 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-devsecops-images
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: only-allow-approved-image
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - devsecops-demo
+      validate:
+        message: "Only the approved signed DevSecOps demo image is allowed in this namespace."
+        pattern:
+          spec:
+            containers:
+              - image: "ghcr.io/qasemmagdi2002/devsecops-demo:*"

@@ -1,0 +1,32 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-signed-devsecops-image
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: verify-devsecops-demo-image
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - devsecops-demo
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/qasemmagdi2002/devsecops-demo:*"
+            - "ghcr.io/qasemmagdi2002/devsecops-demo@*"
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+          attestors:
+            - count: 1
+              entries:
+                - keyless:
+                    subjectRegExp: "^https://github\\.com/QasemMagdi2002/DevSecOps-Signed-Delivery/.+"
+                    issuer: "https://token.actions.githubusercontent.com"
+                    rekor:
+                      url: "https://rekor.sigstore.dev"
