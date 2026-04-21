@@ -107,6 +107,23 @@ jobs:
           COSIGN_YES: "true"
         run: |
           cosign sign "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
+      
+      - name: Attest SBOM to image
+        env:
+          COSIGN_YES: "true"
+        run: |
+          cosign attest \
+            --predicate sbom-cyclonedx.json \
+            --type cyclonedx \
+            "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
+
+      - name: Verify SBOM attestation
+        run: |
+          cosign verify-attestation \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.+" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --type cyclonedx \
+            "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
 
       - name: Verify signed image
         run: |
