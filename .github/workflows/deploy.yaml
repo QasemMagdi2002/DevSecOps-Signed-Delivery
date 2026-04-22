@@ -1,0 +1,57 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_digest:
+        description: "Image digest (sha256:...)"
+        required: true
+      run_deploy:
+        description: "Actually run deployment"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to cluster (self-hosted only)
+    if: ${{ inputs.run_deploy == true }}
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Render deployment manifest with digest
+        shell: bash
+        run: |
+          sed "s|IMAGE_DIGEST_PLACEHOLDER|${{ inputs.image_digest }}|g" k8s/deployment.yaml > k8s/deployment.rendered.yaml
+
+      - name: Show rendered manifest
+        run: cat k8s/deployment.rendered.yaml
+
+      - name: Apply Kubernetes manifests
+        shell: bash
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+          kubectl apply -f k8s/secret.yaml
+          kubectl apply -f k8s/serviceaccount.yaml
+          kubectl apply -f k8s/role.yaml
+          kubectl apply -f k8s/rolebinding.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/pdb.yaml
+          kubectl apply -f k8s/hpa.yaml
+          kubectl apply -f k8s/kyverno/disallow-privileged.yaml
+          kubectl apply -f k8s/kyverno/require-requests-limits.yaml
+          kubectl apply -f k8s/kyverno/restrict-image-source.yaml
+          kubectl apply -f k8s/kyverno/verify-signed-images.yaml
+          kubectl apply -f k8s/kyverno/require-image-digests.yaml
+          kubectl apply -f k8s/deployment.rendered.yaml
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment devsecops-demo -n devsecops-demo
