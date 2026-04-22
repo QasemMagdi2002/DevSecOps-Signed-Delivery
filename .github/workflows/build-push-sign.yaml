@@ -131,3 +131,27 @@ jobs:
             --certificate-identity-regexp "https://github.com/${{ github.repository }}/.+" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
+            
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Deploy rendered manifest
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+          kubectl apply -f k8s/secret.yaml
+          kubectl apply -f k8s/serviceaccount.yaml
+          kubectl apply -f k8s/role.yaml
+          kubectl apply -f k8s/rolebinding.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/pdb.yaml
+          kubectl apply -f k8s/hpa.yaml
+          kubectl apply -f k8s/kyverno/disallow-privileged.yaml
+          kubectl apply -f k8s/kyverno/require-requests-limits.yaml
+          kubectl apply -f k8s/kyverno/restrict-image-source.yaml
+          kubectl apply -f k8s/kyverno/verify-signed-images.yaml
+          kubectl apply -f k8s/kyverno/require-image-digests.yaml
+          kubectl apply -f k8s/deployment.rendered.yaml
