@@ -80,3 +80,14 @@ jobs:
           severity: "HIGH,CRITICAL"
           scanners: "vuln,misconfig,secret"
           skip-files: k8s/local/metrics-server/components.yaml
+      
+      - name: Build container for smoke test
+        run: docker build -t devsecops-demo:test ./app
+
+      - name: Run container smoke test
+        run: |
+          docker run -d --name devsecops-demo-smoke -p 8000:8000 devsecops-demo:test
+          sleep 5
+          curl --fail http://localhost:8000/health
+          docker logs devsecops-demo-smoke
+          docker rm -f devsecops-demo-smoke
