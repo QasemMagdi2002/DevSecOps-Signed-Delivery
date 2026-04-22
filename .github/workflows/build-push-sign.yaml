@@ -131,3 +131,13 @@ jobs:
             --certificate-identity-regexp "https://github.com/${{ github.repository }}/.+" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             "${{ steps.image.outputs.image }}@${{ steps.build.outputs.digest }}"
+
+      - name: Render deployment manifest with digest
+        run: |
+          sed "s|IMAGE_DIGEST_PLACEHOLDER|${{ steps.build.outputs.digest }}|g" k8s/deployment.yaml > k8s/deployment.rendered.yaml
+
+      - name: Upload rendered deployment manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-k8s-manifest
+          path: k8s/deployment.rendered.yaml
