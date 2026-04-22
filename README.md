@@ -1,60 +1,76 @@
-# DevSecOps Signed Delivery Pipeline (Production-Oriented Demo)
+# DevSecOps Signed Delivery Pipeline
 
-This project demonstrates a production-style DevSecOps pipeline that enforces security across the full software delivery lifecycle:
-
-**Code → Build → Artifact → Admission → Runtime**
-
-The system ensures that only **secure, signed container images** are allowed to run in Kubernetes.
+This repository demonstrates how to secure a full software delivery pipeline. It goes beyond build and deploy by enforcing trust at every step. The pipeline follows this flow: Code → Build → Scan → SBOM → Sign → Attest → Deploy → Enforce. Only verified, signed, and compliant images are allowed to run.
 
 ---
 
-## Key Features
+## What This Repository Contains
 
-* CI pipeline with automated testing
-* SAST using Semgrep
-* Repository and configuration scanning using Trivy
-* Secure container image build and push to GHCR
-* Keyless image signing using Cosign (OIDC-based)
-* Kubernetes admission control using Kyverno
-* Enforcement of:
+The repository contains a production-style DevSecOps pipeline with:
+- CI security checks (tests, SAST, scanning)
+- container vulnerability scanning
+- SBOM generation
+- SBOM attestation
+- keyless image signing using OIDC
+- digest-based deployments
+- Kubernetes admission control using Kyverno
+- runtime security enforcement
+- autoscaling with HPA
 
-  * signed images only
-  * resource limits and requests
-  * non-privileged containers
-* Horizontal Pod Autoscaling (HPA) with live metrics
+The application itself is simple—the pipeline is the focus.
 
 ---
 
 ## Architecture Overview
 
-High-level flow:
+Here's how the system works:
 
-1. Developer pushes code
+1. Code is pushed to GitHub
 2. GitHub Actions runs:
-
-   * tests
-   * security scans (Semgrep, Trivy)
-3. Docker image is built and pushed to GHCR
-4. Image is signed using Cosign (keyless signing via GitHub OIDC)
-5. Kubernetes (via Kyverno) enforces:
-
-   * only approved image source
-   * only signed images allowed
-6. Application is deployed with secure runtime configuration
-7. HPA scales based on CPU usage
+   - tests
+   - Semgrep (SAST)
+   - Trivy (filesystem + image scan)
+3. Docker image is built
+4. Image is scanned before push
+5. SBOM is generated from the image
+6. Image is pushed to GHCR
+7. Image is signed using Cosign (keyless)
+8. SBOM is attached to the image (attestation)
+9. Kubernetes enforces:
+   - allowed registry only
+   - signed images only
+   - digest-based images only
+10. Application runs with strict runtime security
+11. HPA scales based on load
 
 ---
 
-## Tech Stack
+## Key Security Controls
 
-* GitHub Actions (CI/CD)
-* Docker + GHCR (registry)
-* Cosign (image signing)
-* Kyverno (policy enforcement)
-* Kubernetes (Docker Desktop)
-* FastAPI (demo app)
-* Trivy (security scanning)
-* Semgrep (SAST)
+### CI Layer
+- Semgrep scans the code
+- Trivy scans the repository and configuration
+
+### Build Layer
+- Docker image is built securely
+- vulnerabilities are blocked before push
+
+### Artifact Layer
+- SBOM is generated using Syft
+- image is signed using Cosign
+- SBOM is attached to the image
+
+### Admission Layer
+- Kyverno blocks:
+  - unsigned images
+  - tag-based images
+  - untrusted registries
+
+### Runtime Layer
+- no privileged containers
+- no root user
+- read-only filesystem
+- resource limits enforced
 
 ---
 
@@ -62,78 +78,79 @@ High-level flow:
 
 ```
 .github/workflows/   → CI/CD pipelines
-app/                 → FastAPI demo service
+app/                 → FastAPI service
 k8s/                 → Kubernetes manifests
-  ├── kyverno/       → security policies
-  ├── local/         → local cluster components (metrics-server)
-docs/                → project documentation
+├── kyverno/       → security policies
+├── local/         → metrics server setup
+docs/                → documentation
 ```
 
 ---
 
-## Security Enforcement
+## How to Run
 
-This project enforces multiple layers of security:
+### Run locally (Docker)
+```bash
+docker build -t devsecops-demo:local ./app
+docker run -p 8000:8000 devsecops-demo:local
+```
 
-### CI Layer
+Open: http://localhost:8000/health
 
-* SAST scanning (Semgrep)
-* Dependency & config scanning (Trivy)
+### Deploy to Kubernetes (manual)
 
-### Build Layer
+1. Run the CI pipeline in GitHub
+2. Download the rendered-k8s-manifest artifact
+3. Apply it:
 
-* Secure Docker build
-* Image pushed to GHCR
+```bash
+kubectl apply -f k8s/deployment.rendered.yaml
+```
 
-### Artifact Layer
+### Deploy using workflow (optional)
 
-* Image signed using Cosign (keyless)
+A separate deploy workflow is included. Provide:
+- image digest
+- enable deploy flag
 
-### Admission Layer
-
-* Kyverno verifies:
-
-  * image source
-  * signature validity
-
-### Runtime Layer
-
-* No privileged containers
-* Resource limits required
-* Read-only root filesystem
-* Non-root execution
+This works when using a self-hosted runner or a reachable cluster.
 
 ---
 
-## Demo Scenarios
+## Why This Repository Matters
 
-See: `docs/demo-scenarios.md`
-
-Includes:
-
-* signed image deployment (allowed)
-* unsigned image deployment (blocked)
-* policy enforcement examples
-* HPA scaling demonstration
-
----
-
-## Why This Project
-
-Most DevOps projects stop at deployment.
-
-This project demonstrates **enforced trust and security** across the delivery pipeline, which is a key requirement in modern production systems.
+Most DevOps projects stop at deployment. This one enforces what gets built, what gets shipped, and what gets allowed to run. Every stage is verified.
 
 ---
 
 ## Status
 
-Core DevSecOps pipeline completed (Phases 1–5).
+**Completed:**
+- CI security pipeline
+- container scanning
+- SBOM generation
+- SBOM attestation
+- image signing
+- digest-only deployment
+- Kyverno policy enforcement
+- runtime hardening
 
-Next improvements:
-
-* SBOM generation (Syft)
-* image vulnerability scanning in pipeline
-* digest-based deployment enforcement
+**Next Steps:**
+- SBOM-based admission policies
+- vulnerability allowlisting (VEX)
+- deployment promotion stages
+- remote cluster automation
 
 ---
+
+## Documentation
+
+- [docs/demo-scenarios.md](docs/demo-scenarios.md)
+- [docs/sbom-strategy.md](docs/sbom-strategy.md)
+- [docs/security-decisions.md](docs/security-decisions.md)
+
+---
+
+## Summary
+
+This repository does not just automate delivery—it secures it.

@@ -1,52 +1,109 @@
 # Demo Scenarios
 
-This document outlines how to demonstrate the security capabilities of the pipeline.
+This document shows how the system behaves in real situations. Each scenario proves that a specific control works.
 
 ---
 
-## Scenario 1 — Signed Image Deployment (Allowed)
+## Scenario 1 — Signed Image Deployment
 
-### Steps
-
-* Deploy using:
-
-  ```
-  ghcr.io/qasemmagdi2002/devsecops-demo:latest
-  ```
-
-### Expected Result
-
-* Pod starts successfully
-* Kyverno allows the request
+A properly built image is deployed. The CI pipeline runs, the image is scanned, an SBOM is generated, the image is signed, and deployment uses the image digest. As a result, the deployment succeeds, pods start normally, and the application responds correctly.
 
 ---
 
-## Scenario 2 — Unapproved Image (Blocked)
+## Scenario 2 — Unsigned Image
 
-### Steps
+An image without a signature is deployed. For example:
 
-* Modify deployment to:
+```yaml
+image: ghcr.io/qasemmagdi2002/devsecops-demo@sha256:xxxx
+```
 
-  ```
-  image: nginx:latest
-  ```
-
-* Apply:
-
-  ```
-  kubectl apply -f k8s/deployment.yaml
-  ```
-
-### Expected Result
-
-* Admission denied
-* Kyverno blocks deployment
+But the image was never signed. Kyverno blocks the deployment, and no pods are created because signed image verification is required.
 
 ---
 
-## Scenario 3 — Missing Resource Limits (Blocked)
+## Scenario 3 — Tag-Based Image
 
-### Steps
+A tag is used instead of a digest. For example:
+
+```yaml
+image: ghcr.io/qasemmagdi2002/devsecops-demo:latest
+```
+
+Kyverno blocks the deployment because tags are mutable and not trusted. Only digest-based images are allowed.
+
+---
+
+## Scenario 4 — Untrusted Registry
+
+An image from a different registry is deployed. For example:
+
+```yaml
+image: docker.io/library/nginx:latest
+```
+
+Kyverno blocks the deployment because only approved registries are allowed.
+
+---
+
+## Scenario 5 — Missing Resource Limits
+
+A container is deployed without CPU or memory limits. For example:
+
+```yaml
+resources: {}
+```
+
+Kyverno blocks the deployment because all containers must define resource requests and limits.
+
+---
+
+## Scenario 6 — Privileged Container
+
+A container is deployed with elevated privileges. For example:
+
+```yaml
+securityContext:
+  privileged: true
+```
+
+Kyverno blocks the deployment because privileged containers are not allowed.
+
+---
+
+## Scenario 7 — Runtime Hardening
+
+The application runs with strict security settings. Enforced settings include a non-root user, read-only root filesystem, and dropped Linux capabilities. The application runs normally, but the attack surface is reduced.
+
+---
+
+## Scenario 8 — HPA Scaling
+
+The CPU endpoint is triggered:
+
+```
+/cpu?iterations=5000000
+```
+
+CPU usage increases, HPA scales the number of pods, and load is distributed.
+
+---
+
+## Scenario 9 — SBOM Generation
+
+The pipeline generates an SBOM from the built image. The SBOM is stored as an artifact and reflects actual runtime dependencies.
+
+---
+
+## Scenario 10 — SBOM Attestation
+
+The SBOM is attached to the image. The SBOM is linked to the image digest, and its integrity is verifiable.
+
+---
+
+## Summary
+
+Each scenario shows one layer of control: CI blocks insecure code, build blocks vulnerable images, SBOM shows what is inside the image, signing proves image origin, admission blocks unsafe deployments, and runtime enforces safe execution. Nothing untrusted reaches the cluster.
 
 * Remove resource requests/limits from deployment
 
