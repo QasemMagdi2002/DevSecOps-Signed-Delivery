@@ -29,7 +29,7 @@ jobs:
           echo "local_image=devsecops-demo:ci" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f92a3a5a782163158c3527b87640fa88029d2f2d
+        uses: docker/setup-buildx-action@f92633c633a2861e0b1b920150b079034293f773
 
       - name: Extract Docker metadata
         id: meta
