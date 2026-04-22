@@ -1,8 +1,14 @@
 # DevSecOps Signed Delivery Pipeline
-
 This repository demonstrates how to secure a full software delivery pipeline. It goes beyond build and deploy by enforcing trust at every step. The pipeline follows this flow: Code → Build → Scan → SBOM → Sign → Attest → Deploy → Enforce. Only verified, signed, and compliant images are allowed to run.
 
----
+<img width="20%" height="200" alt="Kubernetes_logo_without_workmark svg" src="https://github.com/user-attachments/assets/2cd54f75-9a81-4306-b23f-7fa92ef0bb6a" />
+
+<img width="26%" height="200" alt="kyverno" src="https://github.com/user-attachments/assets/998a16cc-f8bc-4654-ae6f-e04f70097d58" />
+
+<img width="25%" height="200" alt="7821d6d6-735d-4290-a708-d0801649b6e3" src="https://github.com/user-attachments/assets/f41e8e7b-c2df-4856-8fb7-8d10d946c054" />
+
+<img width="23%" height="200" alt="44036562" src="https://github.com/user-attachments/assets/8ac44bf0-8633-4c0d-bedd-7b76d2a277db" />
+
 
 ## What This Repository Contains
 
@@ -20,7 +26,6 @@ The repository contains a production-style DevSecOps pipeline with:
 The application itself is simple—the pipeline is the focus.
 
 ---
-
 ## Architecture Overview
 
 Here's how the system works:
